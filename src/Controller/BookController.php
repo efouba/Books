@@ -15,6 +15,7 @@ use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
 use Symfony\Component\Serializer\Normalizer\AbstractNormalizer;
 use Symfony\Component\Serializer\Serializer;
 use Symfony\Component\Serializer\SerializerInterface;
+use Symfony\Component\Validator\Validator\ValidatorInterface;
 
 class BookController extends AbstractController
 {
@@ -45,9 +46,16 @@ class BookController extends AbstractController
     }
 
     #[Route('/api/books',name:"createBook",methods:['POST'])]
-    public function createBook(Request $request,SerializerInterface $serializer,EntityManagerInterface $en,UrlGeneratorInterface $urlgenerator,AuthorRepository $authorRepository):JsonResponse
+    public function createBook(Request $request,SerializerInterface $serializer,EntityManagerInterface $en,UrlGeneratorInterface $urlgenerator,AuthorRepository $authorRepository,ValidatorInterface $validator):JsonResponse
     {
         $book =$serializer->deserialize($request->getContent(),Book::class,'json');
+        //On verife les erreurs
+        $errors=$validator->validate($book);
+        if ($errors->count()>0) {
+            return new JsonResponse($serializer->serialize($errors,'json'),JsonResponse::HTTP_BAD_REQUEST,[],true);
+        }
+        $en->persist($book);
+        $en->flush();
        //recuperation de l'ensemble de donnees envoyes sous forme de tableau
        $content=$request->toArray();
        //Recuperation de l'idAuhtor. S'il n'est pas defini, alors on met -1 par defaut
@@ -55,8 +63,7 @@ class BookController extends AbstractController
        // On cherche l'auteur qui correspond et on l'assigne au livre.
         // Si "find" ne trouve pas l'auteur, alors null sera retourné.
         $book->setAuthor($authorRepository->find($idAuthor));
-        $en->persist($book);
-        $en->flush();
+       
         $JsonBook=$serializer->serialize($book,'json',['groups'=>'getBooks']);
         $location=$urlgenerator->generate('DetailBook',['id'=>$book->getId()],
         UrlGeneratorInterface::ABSOLUTE_URL);
