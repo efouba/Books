@@ -12,6 +12,7 @@ use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
+use Symfony\Component\Security\Http\Attribute\IsGranted;
 use Symfony\Component\Serializer\Normalizer\AbstractNormalizer;
 use Symfony\Component\Serializer\Serializer;
 use Symfony\Component\Serializer\SerializerInterface;
@@ -20,11 +21,13 @@ use Symfony\Component\Validator\Validator\ValidatorInterface;
 class BookController extends AbstractController
 {
     #[Route('/api/books', name: 'app_book',methods:['GET'])]
-    public function getAllBooks(BookRepository $bookRepository,SerializerInterface $serializer): JsonResponse
+    public function getAllBooks(BookRepository $bookRepository,SerializerInterface $serializer,Request $request): JsonResponse
     {
-        $BookList=$bookRepository->findAll();
-        $JsonBook=$serializer->serialize($BookList,'json',['groups' => 'getBooks']);
-        return new JsonResponse($JsonBook,Response::HTTP_OK,[],true);
+        $page=$request->get('page',1);
+        $limit=$request->get('limit',3);
+        $BookList=$bookRepository->findAllWithPagination($page,$limit);
+        $JsonBookList=$serializer->serialize($BookList,'json',['groups' => 'getBooks']);
+        return new JsonResponse($JsonBookList,Response::HTTP_OK,[],true);
     }
     #[Route('/api/books/{id}',name:'DetailBook',methods:['GET'])]
     public function getDetailBook(Book $book,SerializerInterface $serializer,BookRepository $bookRepository){
@@ -46,6 +49,7 @@ class BookController extends AbstractController
     }
 
     #[Route('/api/books',name:"createBook",methods:['POST'])]
+    #[IsGranted('ROLE_ADMIN', message: 'Vous n\'avez pas les droits suffisants pour créer un livre')]
     public function createBook(Request $request,SerializerInterface $serializer,EntityManagerInterface $en,UrlGeneratorInterface $urlgenerator,AuthorRepository $authorRepository,ValidatorInterface $validator):JsonResponse
     {
         $book =$serializer->deserialize($request->getContent(),Book::class,'json');
