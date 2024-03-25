@@ -86,15 +86,25 @@ class BookController extends AbstractController
     }
 
     #[Route('/api/books/{id}',name:"updateBook",methods:['PUT'])]
-    public function updateBook(Request $request,SerializerInterface $serializer,Book $curentBook,EntityManagerInterface $en,AuthorRepository $authorRepository ):JsonResponse
+    public function updateBook(Request $request,SerializerInterface $serializer,Book $curentBook,EntityManagerInterface $en,AuthorRepository $authorRepository,ValidatorInterface $validator,TagAwareCacheInterface $cache):JsonResponse
     {
-        $updatedBook=$serializer->deserialize($request->getContent(),Book::class,'json',[AbstractNormalizer::OBJECT_TO_POPULATE=>$curentBook]);
+        $updatedBook=$serializer->deserialize($request->getContent(),Book::class,'json');
+        $curentBook->setTitle($updatedBook->getTitle());
+        $curentBook->setCoverText($updatedBook->getCoverText());
+        //On verifie les erreurs
+        $errors=$validator->validate($curentBook);
+        if ($errors->count()>0) {
+            return new JsonResponse($serializer->serialize($errors,'json'),
+           JsonResponse::HTTP_BAD_REQUEST,[],true);
+        }
         $content=$request->toArray();
         $idAuthor=$content['idAuthor'] ?? -1;
         $updatedBook->setAuthor($authorRepository->find($idAuthor));
 
         $en->persist($updatedBook);
         $en->flush();
+        //On vide le cache
+        $cache->invalidateTags(["booksCache"]);
         return new JsonResponse(null,JsonResponse::HTTP_NO_CONTENT);
 
     }
