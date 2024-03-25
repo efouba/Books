@@ -7,18 +7,17 @@ use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
 use JMS\Serializer\Annotation\Groups;
 use Hateoas\Configuration\Annotation as Hateoas;
+
 /**
  * @Hateoas\Relation(
  *      "self",
  *      href = @Hateoas\Route(
- *          "detailBook",
+ *          "DetailBook",
  *          parameters = { "id" = "expr(object.getId())" }
  *      ),
  *      exclusion = @Hateoas\Exclusion(groups="getBooks")
  * )
  *
- */
-/*
  * @Hateoas\Relation(
  *      "delete",
  *      href = @Hateoas\Route(
@@ -39,6 +38,7 @@ use Hateoas\Configuration\Annotation as Hateoas;
  *
  */
 #[ORM\Entity(repositoryClass: BookRepository::class)]
+
 class Book
 {
     #[ORM\Id]
@@ -58,8 +58,12 @@ class Book
     private ?string $coverText = null;
 
     #[ORM\ManyToOne(inversedBy: 'books')]
-    #[Groups(["getBooks","getAuthors"])]
+    #[Groups(["getBooks"])]
     private ?Author $author = null;
+
+    #[ORM\Column(type: Types::TEXT, nullable: true)]
+    #[Groups(["getBooks"])]
+    private ?string $comment = null;
 
     public function getId(): ?int
     {
@@ -98,6 +102,18 @@ class Book
     public function setAuthor(?Author $author): static
     {
         $this->author = $author;
+
+        return $this;
+    }
+
+    public function getComment(): ?string
+    {
+        return $this->comment;
+    }
+
+    public function setComment(?string $comment): static
+    {
+        $this->comment = $comment;
 
         return $this;
     }

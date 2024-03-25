@@ -51,6 +51,7 @@ class AppFixtures extends Fixture
             $book->setTitle('Livre'.$i);
             $book->setCoverText('Quatrieme de couverture N'.$i);
             $book->setAuthor($listAuthor[array_rand($listAuthor)]);
+            $book->setComment("Commentaire du bibliothecaire".$i);
             $manager->persist($book);
         }
         $manager->flush();
